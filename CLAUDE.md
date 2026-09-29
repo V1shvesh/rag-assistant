@@ -39,8 +39,10 @@ Working through build steps in order:
 1. Project skeleton — DONE (module folders created, deps installed)
 2. Supabase + pgvector setup — DONE (pgvector 0.8.2 enabled, `chunks` table
    created, ConfigModule/DatabaseModule wired to DATABASE_URL)
-3. Epub parsing + chunking — IN PROGRESS
-4. Embeddings generation
+3. Epub parsing + chunking — DONE (`ingestion/` module: epub2 + html-to-text,
+   one chunk per chapter/section, `POST /ingestion/epub` to trigger; verified
+   against "Project Hail Mary" — 37 chunks)
+4. Embeddings generation — IN PROGRESS
 5. Retrieval endpoint
 6. Generation endpoint
 7. Eval set
