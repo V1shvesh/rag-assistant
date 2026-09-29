@@ -35,9 +35,9 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 - (eval script command — to be added once eval harness exists)
 
 ## Current status
-Just starting. No code written yet. Working through build steps in order:
-1. Project skeleton — IN PROGRESS
-2. Supabase + pgvector setup
+Working through build steps in order:
+1. Project skeleton — DONE (module folders created, deps installed)
+2. Supabase + pgvector setup — IN PROGRESS
 3. Epub parsing + chunking
 4. Embeddings generation
 5. Retrieval endpoint
