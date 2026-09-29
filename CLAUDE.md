@@ -37,8 +37,9 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 ## Current status
 Working through build steps in order:
 1. Project skeleton — DONE (module folders created, deps installed)
-2. Supabase + pgvector setup — IN PROGRESS
-3. Epub parsing + chunking
+2. Supabase + pgvector setup — DONE (pgvector 0.8.2 enabled, `chunks` table
+   created, ConfigModule/DatabaseModule wired to DATABASE_URL)
+3. Epub parsing + chunking — IN PROGRESS
 4. Embeddings generation
 5. Retrieval endpoint
 6. Generation endpoint
