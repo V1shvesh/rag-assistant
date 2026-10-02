@@ -39,7 +39,8 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 ## How to run
 - `npm run start:dev` — dev server with hot reload
 - `npm run test` — unit tests
-- (eval script command — to be added once eval harness exists)
+- `npm run eval` — runs the fixed Q&A eval set against the live
+  Supabase DB + OpenAI + Anthropic (real calls, not mocked)
 
 ## Current status
 Working through build steps in order:
@@ -69,7 +70,16 @@ Working through build steps in order:
    answer for "Who is Rocky?", honest "I don't know" for an out-of-corpus
    question, confirmed zero-Claude-call short-circuit for an empty source
    filter)
-7. Eval set
+7. Eval set — DONE (`eval/` module: `eval-cases.ts` holds 12 hand-written
+   Q&A pairs against "Project Hail Mary" — 9 answerable with expected
+   keywords, 3 deliberately unanswerable/out-of-corpus. `run-eval.ts` is a
+   standalone script, not an HTTP endpoint — boots the real Nest app
+   context and calls `GenerationService.answer()` directly against the
+   live DB/OpenAI/Anthropic, grades by keyword presence (answerable) or
+   refusal-phrase presence (unanswerable), run via `npm run eval`.
+   Verified live: 12/12 passing — all 9 answerable cases returned
+   grounded, keyword-matching answers; all 3 unanswerable cases correctly
+   said "I don't know" / refused rather than hallucinating)
 
 ## Notes
 - Source material is a personal epub book — extraction happens once, chunks are
