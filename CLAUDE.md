@@ -56,7 +56,10 @@ Working through build steps in order:
    non-recoverable errors; `POST /embeddings/generate`. Verified live: all 37
    "Project Hail Mary" chunks embedded successfully, 0 failures, including
    correct unit-norm pooled vectors for the 5 oversized chapters)
-5. Retrieval endpoint
+5. Retrieval endpoint — DONE (`retrieval/` module: `POST /retrieval/search`
+   embeds the question via the shared `EmbeddingsService.embed()` and runs a
+   pgvector cosine-distance query against `chunks`. Verified live: "Who is
+   Rocky?" returns five genuinely Rocky-centric chapters as top matches)
 6. Generation endpoint
 7. Eval set
 

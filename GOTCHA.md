@@ -123,3 +123,27 @@ before calling the constructor.
 parameter value kicks in normally. Any constructor-injected default on an
 `@Injectable()` needs `@Optional()` if the parameter's type isn't itself an
 injectable class/token.
+
+## Overriding a provider in a Nest e2e test doesn't stop its unused dependencies from being constructed (2026-10-02)
+
+**What happened:** `test/retrieval.e2e-spec.ts` imports `RetrievalModule`
+and overrides `RetrievalService` with a fake via `.overrideProvider(...)
+.useValue(...)`, expecting that to isolate the test from anything
+`RetrievalService` would have needed. It still failed to compile: `Nest
+can't resolve dependencies of the EmbeddingsService (?, PG_POOL,
+EmbeddingsRateLimiter)` — `ConfigService` wasn't available because no
+`ConfigModule` was imported into this narrow test module.
+
+**Why:** `RetrievalModule` imports `EmbeddingsModule` (so `RetrievalService`
+can inject `EmbeddingsService`). Nest eagerly instantiates every provider a
+compiled module graph declares, not just the ones still reachable after an
+override — so the *real* `EmbeddingsService` was being constructed anyway,
+even though the only thing that used to depend on it (`RetrievalService`)
+had just been replaced with a fake that no longer calls it.
+
+**Fix / takeaway:** When an e2e test imports a module that itself imports
+another module with its own real dependencies (API keys, DB pools, etc.),
+override *all* of those nested services too, not just the top-level one
+under test — e.g. also
+`.overrideProvider(EmbeddingsService).useValue({ embed: jest.fn() })`. A
+provider override isn't a prune of the dependency graph; it's a swap.
