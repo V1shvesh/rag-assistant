@@ -60,7 +60,15 @@ Working through build steps in order:
    embeds the question via the shared `EmbeddingsService.embed()` and runs a
    pgvector cosine-distance query against `chunks`. Verified live: "Who is
    Rocky?" returns five genuinely Rocky-centric chapters as top matches)
-6. Generation endpoint
+6. Generation endpoint — DONE (`generation/` module: `POST /generation/ask`
+   retrieves context then calls Claude Haiku 4.5 for a grounded, cited
+   answer — chosen for cost, see GENERATION_MODEL in generation.constants.ts.
+   Graceful degradation: zero-chunks short-circuit, prompt-enforced
+   groundedness, typed handling of auth/rate-limit/connection/unknown
+   Anthropic errors, truncation flagging. Verified live: accurate cited
+   answer for "Who is Rocky?", honest "I don't know" for an out-of-corpus
+   question, confirmed zero-Claude-call short-circuit for an empty source
+   filter)
 7. Eval set
 
 ## Notes
