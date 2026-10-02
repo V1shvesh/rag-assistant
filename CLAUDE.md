@@ -11,9 +11,14 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 - Database: Postgres with pgvector extension, hosted on Supabase (free tier)
 - Embeddings: OpenAI text-embedding-3-small (1536 dimensions)
 - LLM: Claude API (Anthropic)
-- Frontend: minimal for now — a bare HTML page or simple React, not a priority yet
+- Frontend: React + Vite + TypeScript SPA in `frontend/`, Supabase Auth for sign-in
+- Auth: Supabase Auth (ES256 JWTs, verified backend-side via JWKS — see `auth/`)
+- Hosting: Render (Docker web service for the backend + static site for the
+  frontend), free instance type — see `PLAYBOOK.md`
 
 ## Project structure (NestJS modules)
+- `auth/` — verifies Supabase-issued JWTs (global `APP_GUARD`, routes opt out
+  via `@Public()` rather than opting in)
 - `ingestion/` — epub parsing + chunking (source text -> chunks table)
 - `embeddings/` — generates and stores embeddings for chunks
 - `retrieval/` — given a query, embeds it and finds top-k similar chunks via pgvector
@@ -21,6 +26,8 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
   grounded answer with source citations
 - `eval/` — small script/test harness that runs a fixed Q&A test set and checks
   answers against expected results
+- `frontend/` — separate Vite/React app with its own `package.json`,
+  lint/prettier/tsconfig, not part of the NestJS build
 
 ## Conventions
 - Use NestJS dependency injection — no manual instantiation of services
@@ -30,17 +37,20 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 - Prefer explicit types over `any`
 - **Every code change must leave the repo clean on `npm run lint`, prettier formatting,
   and `npx tsc --noEmit` before being considered done — no exceptions, no deferring
-  cleanup to "later."**
+  cleanup to "later."** This applies to `frontend/` too — it has its own
+  `npm run lint` / `npm run typecheck`, run from inside `frontend/`.
 - **Each commit should be a single, meaningful, reviewable unit of change — not a grab
   bag of unrelated edits.** If a piece of work naturally splits into independent steps
   (e.g. a config/tooling fix vs. the feature it unblocked, or a cleanup vs. new
   behavior), commit them separately rather than squashing everything into one commit.
 
 ## How to run
-- `npm run start:dev` — dev server with hot reload
+- `npm run start:dev` — backend dev server with hot reload
+- `cd frontend && npm run dev` — frontend dev server (Vite)
 - `npm run test` — unit tests
 - `npm run eval` — runs the fixed Q&A eval set against the live
   Supabase DB + OpenAI + Anthropic (real calls, not mocked)
+- See `PLAYBOOK.md` for deploying, pausing, and resuming the hosted version
 
 ## Current status
 Working through build steps in order:
@@ -80,6 +90,25 @@ Working through build steps in order:
    Verified live: 12/12 passing — all 9 answerable cases returned
    grounded, keyword-matching answers; all 3 unanswerable cases correctly
    said "I don't know" / refused rather than hallucinating)
+8. Auth + React frontend — DONE (`auth/` module: global `SupabaseAuthGuard`
+   verifies Supabase-issued ES256 JWTs via JWKS, `@Public()` opt-out for
+   the health route and anything else that should stay open; CORS scoped
+   to `CORS_ORIGINS`. `frontend/`: Vite/React SPA with Supabase Auth
+   sign-in/sign-up and a grounded Q&A view that distinguishes a cited
+   answer from the "not found in the book" case, with cold-start-aware
+   loading states. Verified live in a browser: sign-up (including the
+   check-your-email state), sign-in, a grounded "Who is Rocky?" answer
+   with real citations, an honest "not found" answer for an
+   out-of-corpus question, and sign-out)
+9. Deploy + pause/resume playbook — DONE (`Dockerfile` + `.dockerignore`
+   for the stateless backend image; `render.yaml` blueprint for a Docker
+   web service + static site; `scripts/pause.sh` / `scripts/resume.sh`
+   wrapping Render's suspend/resume API, with `resume.sh` restoring
+   Supabase before Render since the two self-pause on independent
+   timers; full walkthrough in `PLAYBOOK.md`. Not yet deployed live —
+   Docker isn't installed locally, so the Dockerfile is unverified by a
+   local build; first real verification is Render's own build on
+   initial deploy)
 
 ## Notes
 - Source material is a personal epub book — extraction happens once, chunks are
