@@ -171,3 +171,32 @@ hitting live infra) — that's the only way to actually prove a global
 `AppModule` level is covered by feature-module-scoped e2e specs; it isn't,
 and the test suite will stay green either way, which makes this easy to
 miss silently.
+
+## `groundedInContext: true` doesn't mean the answer actually used the context (2026-10-02)
+
+**What happened:** Live-tested the frontend against "What is the capital
+of France?" and got `groundedInContext: true` with 5 citations attached,
+even though the rendered answer was "I don't know. The passages provided
+do not contain information about the capital of France." The
+`AnswerCard` component only branched on `groundedInContext`, so this
+rendered as a normal cited answer instead of the intended "Not found in
+the book" treatment.
+
+**Why:** `GenerationService.answer()` only sets `groundedInContext: false`
+for its zero-chunk short-circuit (`src/generation/generation.service.ts`).
+When retrieval *does* return chunks but Claude still correctly refuses
+per the system prompt's "say I don't know" instruction, the method falls
+through the normal success path: `groundedInContext: true`, with
+`citations` populated from the retrieved-but-unused chunks. This exact
+behavior was already called out as a known nuance in `EVAL_RESULTS.md`
+("`citations` still lists retrieved-but-unused chunks" for the
+`unanswerable-*` eval cases) — but it hadn't yet surfaced as a frontend
+bug until this live click-through.
+
+**Fix / takeaway:** `AnswerCard.tsx` now also checks the answer text for
+refusal phrases ("i don't know", "i cannot answer", etc. — the same list
+`src/eval/run-eval.ts` already uses for grading) before deciding which
+treatment to render, not just the `groundedInContext` flag alone. A
+boolean flag computed once per request can't capture every case a
+free-text model response can land in — when a flag is a proxy for "did
+the model actually use this," treat it as a hint, not a guarantee.
