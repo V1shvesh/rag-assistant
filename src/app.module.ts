@@ -6,7 +6,11 @@ import { DatabaseModule } from './database/database.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, IngestionModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    DatabaseModule,
+    IngestionModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -11,7 +11,9 @@ export const PG_POOL = 'PG_POOL';
       provide: PG_POOL,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL') }),
+        new Pool({
+          connectionString: config.getOrThrow<string>('DATABASE_URL'),
+        }),
     },
   ],
   exports: [PG_POOL],

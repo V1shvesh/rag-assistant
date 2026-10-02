@@ -17,7 +17,8 @@ export interface ParsedEpub {
 export class EpubParserService {
   async parse(filePath: string): Promise<ParsedEpub> {
     const epub = await this.openEpub(filePath);
-    const bookTitle = epub.metadata.title ?? path.basename(filePath, path.extname(filePath));
+    const bookTitle =
+      epub.metadata.title ?? path.basename(filePath, path.extname(filePath));
 
     const chapters: ParsedChapter[] = [];
     for (const [index, item] of epub.flow.entries()) {
@@ -29,7 +30,10 @@ export class EpubParserService {
       if (!text) {
         continue;
       }
-      chapters.push({ title: item.title ?? `Untitled section ${index + 1}`, text });
+      chapters.push({
+        title: item.title ?? `Untitled section ${index + 1}`,
+        text,
+      });
     }
 
     return { bookTitle, chapters };
@@ -39,7 +43,7 @@ export class EpubParserService {
     return new Promise((resolve, reject) => {
       const epub = new EPub(filePath);
       epub.on('end', () => resolve(epub));
-      epub.on('error', (error) => reject(error));
+      epub.on('error', (error: Error) => reject(error));
       epub.parse();
     });
   }
