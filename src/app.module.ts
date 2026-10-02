@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
+import { GenerationModule } from './generation/generation.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { RetrievalModule } from './retrieval/retrieval.module';
 
@@ -14,6 +15,7 @@ import { RetrievalModule } from './retrieval/retrieval.module';
     IngestionModule,
     EmbeddingsModule,
     RetrievalModule,
+    GenerationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
