@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
+import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 
 @Module({
@@ -10,6 +11,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     IngestionModule,
+    EmbeddingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
