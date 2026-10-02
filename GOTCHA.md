@@ -147,3 +147,27 @@ override *all* of those nested services too, not just the top-level one
 under test — e.g. also
 `.overrideProvider(EmbeddingsService).useValue({ embed: jest.fn() })`. A
 provider override isn't a prune of the dependency graph; it's a swap.
+
+## A global guard (APP_GUARD) is silently absent from narrow e2e test modules (2026-10-02)
+
+**What happened:** Added a global `SupabaseAuthGuard` via
+`{ provide: APP_GUARD, useClass: SupabaseAuthGuard }` in `AppModule`,
+expecting every existing e2e spec (`generation`, `retrieval`, `ingestion`)
+to start failing with 401 until each added
+`.overrideGuard(SupabaseAuthGuard).useValue({ canActivate: () => true })`.
+Ran `npm run test:e2e` first to confirm — all 17 pre-existing tests still
+passed, completely unaffected, with no override added at all.
+
+**Why:** Each of those specs does `Test.createTestingModule({ imports: [GenerationModule] })`
+(etc.) — a narrow module that never imports `AppModule`. `APP_GUARD` is
+registered on `AppModule`'s own `providers` array, so it simply isn't part
+of the compiled graph for any test that doesn't import `AppModule` itself.
+The guard was real and working; the existing specs just never exercised it.
+
+**Fix / takeaway:** A new `test/auth.e2e-spec.ts` was added that imports
+`AppModule` directly (overriding the downstream services it needs to avoid
+hitting live infra) — that's the only way to actually prove a global
+`APP_GUARD` is wired in. Don't assume a guard/interceptor registered at the
+`AppModule` level is covered by feature-module-scoped e2e specs; it isn't,
+and the test suite will stay green either way, which makes this easy to
+miss silently.
