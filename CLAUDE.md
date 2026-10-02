@@ -64,3 +64,7 @@ Working through build steps in order:
 - Source material is a personal epub book — extraction happens once, chunks are
   cached in the DB, not re-parsed on every run.
 - Keep this file updated as we finish each numbered step above.
+- See `GOTCHA.md` for surprises where tooling/docs/dashboards didn't match
+  reality (e.g. ESM-only deps silently breaking Jest, untyped packages,
+  OpenAI's rate-limit dashboard lagging actual enforcement). Add to it
+  whenever something goes wrong in a surprising way.
