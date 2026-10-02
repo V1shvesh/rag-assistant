@@ -46,8 +46,16 @@ describe('EmbeddingsRateLimiter', () => {
   });
 
   it('throws DailyLimitExceededError without waiting once the daily cap is reached', async () => {
-    (limiter as unknown as { requestsToday: number }).requestsToday = 999_999;
+    const limitedLimiter = new EmbeddingsRateLimiter({
+      requestsPerMinute: 1000,
+      tokensPerMinute: 1_000_000,
+      requestsPerDay: 1,
+    });
 
-    await expect(limiter.reserve(1)).rejects.toThrow(DailyLimitExceededError);
+    await limitedLimiter.reserve(1);
+
+    await expect(limitedLimiter.reserve(1)).rejects.toThrow(
+      DailyLimitExceededError,
+    );
   });
 });

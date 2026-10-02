@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import type { APIError, AuthenticationError, RateLimitError } from 'openai';
 import { EmbeddingsService } from './embeddings.service';
 import type { EmbeddingsRateLimiter } from './embeddings-rate-limiter';
-import { SAFE_TOKENS_PER_MINUTE } from './embeddings.constants';
+import { MAX_ITEMS_PER_REQUEST } from './embeddings.constants';
 
 interface OpenAIModule {
   APIError: typeof APIError;
@@ -131,23 +131,24 @@ describe('EmbeddingsService', () => {
     expect(result.failed).toBe(0);
   });
 
-  it('splits into multiple requests once the per-minute token budget would be exceeded', async () => {
-    totalChunks = 5;
-    // Five chunks of 7000 "tokens" each: the budget (SAFE_TOKENS_PER_MINUTE) is spent
-    // after the 4th (28,000), so the 5th must start a new batch.
-    pendingRows = Array.from({ length: 5 }, (_, i) => ({
+  it('splits into multiple requests once the per-request item cap would be exceeded', async () => {
+    const chunkCount = MAX_ITEMS_PER_REQUEST + 1;
+    totalChunks = chunkCount;
+    // One more chunk than MAX_ITEMS_PER_REQUEST allows in a single batch, each tiny
+    // enough that the token budget is never the binding constraint here.
+    pendingRows = Array.from({ length: chunkCount }, (_, i) => ({
       id: i + 1,
-      text: 'x'.repeat(7000),
+      text: 'x'.repeat(10),
     }));
-    expect(4 * 7000).toBeLessThanOrEqual(SAFE_TOKENS_PER_MINUTE);
-    expect(5 * 7000).toBeGreaterThan(SAFE_TOKENS_PER_MINUTE);
 
     const result = await buildService().generateForChunks();
 
     expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2);
-    expect(mockEmbeddingsCreate.mock.calls[0][0].input).toHaveLength(4);
+    expect(mockEmbeddingsCreate.mock.calls[0][0].input).toHaveLength(
+      MAX_ITEMS_PER_REQUEST,
+    );
     expect(mockEmbeddingsCreate.mock.calls[1][0].input).toHaveLength(1);
-    expect(result.embedded).toBe(5);
+    expect(result.embedded).toBe(chunkCount);
   });
 
   it('slices an oversized chunk and saves one combined embedding for it', async () => {
@@ -164,11 +165,12 @@ describe('EmbeddingsService', () => {
   });
 
   it('records a per-chunk failure for the failed batch but still processes the next one', async () => {
-    totalChunks = 5;
-    // Same 4-then-1 split as the batching test above, so each batch can fail independently.
-    pendingRows = Array.from({ length: 5 }, (_, i) => ({
+    const chunkCount = MAX_ITEMS_PER_REQUEST + 1;
+    totalChunks = chunkCount;
+    // Same item-cap-driven split as the batching test above, so each batch can fail independently.
+    pendingRows = Array.from({ length: chunkCount }, (_, i) => ({
       id: i + 1,
-      text: 'x'.repeat(7000),
+      text: 'x'.repeat(10),
     }));
     mockEmbeddingsCreate
       .mockImplementationOnce(() =>
@@ -180,15 +182,11 @@ describe('EmbeddingsService', () => {
 
     const result = await buildService().generateForChunks();
 
-    expect(result.failed).toBe(4);
-    expect(result.errors).toEqual([
-      { id: 1, message: 'transient failure' },
-      { id: 2, message: 'transient failure' },
-      { id: 3, message: 'transient failure' },
-      { id: 4, message: 'transient failure' },
-    ]);
+    expect(result.failed).toBe(MAX_ITEMS_PER_REQUEST);
+    expect(result.errors).toHaveLength(MAX_ITEMS_PER_REQUEST);
+    expect(result.errors[0]).toEqual({ id: 1, message: 'transient failure' });
     expect(result.embedded).toBe(1);
-    expect(savedUpdates.map((u) => u.id)).toEqual([5]);
+    expect(savedUpdates.map((u) => u.id)).toEqual([chunkCount]);
   });
 
   it('stops the whole run and leaves remaining chunks pending on insufficient quota', async () => {
