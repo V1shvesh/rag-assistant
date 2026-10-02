@@ -124,3 +124,25 @@ Supabase project setup: create project, enable the `pgvector` extension,
 create the `chunks` table (columns: id, source, chapter_title, text,
 embedding vector(1536)). Then wire NestJS's ConfigModule to the Supabase
 connection string via environment variables (never hardcoded).
+
+## Future scope / revisit later
+
+- **Re-chunk oversized chapters (currently deferred in favor of split +
+  mean-pool).** `text-embedding-3-small` has an 8191-token hard limit per
+  input. Measuring the real ingested book ("Project Hail Mary"), 5 of 37
+  chapter-sized chunks exceed it (up to ~10,900 tokens). Chosen fix for
+  now: split the oversized chunk's text into token-bounded slices, embed
+  each slice, and store a single token-weighted, re-normalized average
+  vector per chunk row — no ingestion/schema changes, fully isolated to
+  the embeddings module. Tradeoff: the stored embedding is a *blend* of
+  everything in that chapter, which may reduce retrieval precision for
+  narrow questions about one specific scene inside a long chapter (lower
+  recall risk, not an answer-quality risk, since the full chapter text is
+  still intact and still passed to generation once retrieved).
+  Alternative considered: re-chunk those specific chapters into multiple
+  `chunks` rows (paragraph/scene-aware splitting) at ingestion time,
+  giving each sub-chunk its own undiluted embedding — better retrieval
+  precision, but touches ingestion's "one row per chapter" design and
+  needs careful split-boundary handling. **Revisit this once the eval set
+  (build step 8) exists** — only worth the added complexity if eval
+  results actually show poor retrieval on these specific long chapters.
