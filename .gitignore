@@ -1,6 +1,8 @@
 # compiled output
 /dist
 /node_modules
+frontend/node_modules
+frontend/dist
 
 # logs
 /logs
@@ -12,6 +14,9 @@ yarn-error.log*
 # environment
 .env
 .env.local
+frontend/.env
+frontend/.env.local
+frontend/*.local
 
 # personal source documents (not for redistribution)
 /data

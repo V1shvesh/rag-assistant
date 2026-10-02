@@ -1,0 +1,127 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  max-width: 640px;
+  padding: 2rem 1rem;
+}
+
+.loading-screen {
+  text-align: center;
+  margin-top: 4rem;
+  color: #666;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+input,
+textarea {
+  font-size: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+button {
+  font-size: 1rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: #2a5bd7;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.link-button {
+  background: none;
+  color: #2a5bd7;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.subtitle {
+  color: #666;
+}
+
+.error-text {
+  color: #b91c1c;
+}
+
+.info-text {
+  color: #1d4ed8;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.answer-card {
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid;
+}
+
+.answer-card.grounded {
+  background: #f0f7ff;
+  border-color: #bcd4f7;
+}
+
+.answer-card.not-found {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.answer-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.citations {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.truncated-note {
+  font-size: 0.8rem;
+  color: #92400e;
+  margin: 0.5rem 0 0;
+}
