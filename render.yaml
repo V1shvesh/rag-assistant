@@ -1,0 +1,57 @@
+# Render Blueprint for the RAG assistant: a Docker web service (backend)
+# and a static site (frontend), both deploying on push to main.
+#
+# Secrets are listed by name only (sync: false) -- values are entered in
+# the Render dashboard per service, never committed here.
+#
+# NOTE: pick `region` for the API service after confirming which region
+# the Supabase project actually lives in -- Render's region is immutable
+# once a service is created.
+services:
+  - type: web
+    name: rag-assistant-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Must be the Supavisor connection *pooler* string
+      # (Project Settings -> Database -> Connection pooling), not the
+      # direct db.<ref>.supabase.co host -- that host is IPv6-only and
+      # Render is IPv4-only outbound, so the direct string cannot connect.
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      # The deployed static site's origin, plus http://localhost:5173 for
+      # local dev -- comma-separated. Known only after the static site's
+      # first deploy; set a placeholder first, then update and redeploy.
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: rag-assistant-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      # The API service's https://rag-assistant-api.onrender.com URL.
+      # Known only after the API service's first deploy; set a
+      # placeholder first, then update and rebuild (Vite inlines VITE_*
+      # at build time, so this needs a rebuild, not just a restart).
+      - key: VITE_API_BASE_URL
+        sync: false
