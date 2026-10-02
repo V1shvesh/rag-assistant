@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { RetrievalModule } from './retrieval/retrieval.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
     DatabaseModule,
     IngestionModule,
     EmbeddingsModule,
+    RetrievalModule,
   ],
   controllers: [AppController],
   providers: [AppService],
