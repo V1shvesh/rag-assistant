@@ -49,7 +49,12 @@ Working through build steps in order:
 3. Epub parsing + chunking — DONE (`ingestion/` module: epub2 + html-to-text,
    one chunk per chapter/section, `POST /ingestion/epub` to trigger; verified
    against "Project Hail Mary" — 37 chunks)
-4. Embeddings generation — IN PROGRESS
+4. Embeddings generation — CODE DONE, BLOCKED on OpenAI billing (`embeddings/`
+   module: rate-limited batching against free-tier limits, oversized-chunk
+   split+mean-pool, fail-fast on non-recoverable errors; `POST
+   /embeddings/generate`. Verified live that it batches and fails gracefully —
+   actual embedding of the 37 chunks is blocked until the OpenAI account has
+   a positive credit balance)
 5. Retrieval endpoint
 6. Generation endpoint
 7. Eval set
