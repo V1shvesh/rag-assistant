@@ -28,6 +28,13 @@ answer using ONLY that retrieved context, citing sources, and explicitly saying
 - Environment variables via NestJS ConfigModule — never hardcode API keys
 - Async/await throughout, no raw promises with .then()
 - Prefer explicit types over `any`
+- **Every code change must leave the repo clean on `npm run lint`, prettier formatting,
+  and `npx tsc --noEmit` before being considered done — no exceptions, no deferring
+  cleanup to "later."**
+- **Each commit should be a single, meaningful, reviewable unit of change — not a grab
+  bag of unrelated edits.** If a piece of work naturally splits into independent steps
+  (e.g. a config/tooling fix vs. the feature it unblocked, or a cleanup vs. new
+  behavior), commit them separately rather than squashing everything into one commit.
 
 ## How to run
 - `npm run start:dev` — dev server with hot reload
