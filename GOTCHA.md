@@ -200,3 +200,34 @@ treatment to render, not just the `groundedInContext` flag alone. A
 boolean flag computed once per request can't capture every case a
 free-text model response can land in — when a flag is a proxy for "did
 the model actually use this," treat it as a hint, not a guarantee.
+
+## The root tsconfig has no `exclude`, so adding `frontend/` broke both `tsc --noEmit` and `nest build` (2026-10-02)
+
+**What happened:** After scaffolding `frontend/` (its own separate Vite
+project with its own `tsconfig.json`/JSX settings), running the
+project-wide verification (`npx tsc --noEmit`) failed with dozens of
+errors from inside `frontend/src/*.tsx` — `Cannot use JSX unless the
+'--jsx' flag is provided`, `Relative import paths need explicit file
+extensions`, etc. Separately, `npm run build` (`nest build`, which is
+exactly what the new `Dockerfile` runs) would have had the same problem
+had it been checked before the Dockerfile commit landed.
+
+**Why:** `tsconfig.json` had no `include`/`exclude` at all, so TypeScript's
+default "include everything under this directory" swept up
+`frontend/src/**/*.tsx` into the *backend's* compile, using the
+*backend's* compiler options (no `jsx`, `module: nodenext` with strict
+extension requirements) — nothing about having a `frontend/` subfolder
+with its own `tsconfig.json` automatically isolates it from a parent
+tsconfig with no `exclude`. `tsconfig.build.json` had its own `exclude`
+array, which does **not** merge with a parent's `exclude` across
+`extends` — it fully replaces it, so adding `frontend` to one and not
+the other would have fixed `tsc --noEmit` while leaving `nest build`
+(and therefore the Docker image) broken.
+
+**Fix / takeaway:** Added `"exclude": ["node_modules", "dist", "frontend"]`
+to `tsconfig.json`, and added `"frontend"` to `tsconfig.build.json`'s
+own `exclude` array too (not relying on it inheriting the parent's).
+When adding a sibling project with its own tsconfig inside an existing
+TS project's directory tree, check *every* tsconfig in the repo that
+doesn't explicitly scope its `include`, not just the one that happens
+to run first — `extends` does not merge `exclude`.
