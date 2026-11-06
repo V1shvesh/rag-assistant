@@ -1,98 +1,94 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# RAG Assistant
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A grounded Q&A assistant over a personal book collection. Ask a question, and it
+answers **only** from passages it retrieved from the book, cites the chapters it
+used, and says **"I don't know"** when the book doesn't contain the answer —
+instead of making something up.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Built end to end: ingestion, embeddings, vector search, LLM generation, an eval
+harness, auth, a React frontend, and a deploy setup.
 
-## Description
+## How it works
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+```
+Ingestion (runs once per book)
+  epub ──► parse + chunk by chapter ──► embed (OpenAI) ──► Postgres + pgvector
 
-## Project setup
-
-```bash
-$ npm install
+Query (every question)
+  question ──► embed ──► top-k cosine search ──► Claude (context-only prompt) ──► cited answer
 ```
 
-## Compile and run the project
+The question and the book chunks are embedded through the **same** service
+method, so their vectors are always comparable.
 
-```bash
-# development
-$ npm run start
+## Results
 
-# watch mode
-$ npm run start:dev
+A fixed eval set of 12 hand-written questions against _Project Hail Mary_
+(`npm run eval`, real API calls, no mocks):
 
-# production mode
-$ npm run start:prod
+- **9/9** answerable questions returned correct, cited answers
+- **3/3** deliberately out-of-scope questions were correctly refused — no hallucinations
+
+## Engineering highlights
+
+- **Grounded by design.** The prompt restricts Claude to retrieved context; if
+  retrieval returns nothing, the app short-circuits and never calls the LLM.
+- **Handles chapters larger than the embedding model's limit.** 5 of 37
+  chapters exceed the 8,191-token cap; they're split, embedded in slices, and
+  merged into one token-weighted, re-normalized vector.
+- **Rate-limit aware batching.** Embedding requests are batched against the
+  account's real tokens-per-minute limit, and non-recoverable errors (bad key,
+  no credit) fail fast instead of retrying for minutes.
+- **Typed error handling** for the Claude API (auth, rate limit, connection,
+  truncated output), surfaced cleanly to the UI.
+- **Secure by default.** A global guard verifies Supabase ES256 JWTs via JWKS;
+  routes must explicitly opt out with `@Public()`. CORS is scoped by env.
+- **Tested and linted.** Unit tests across the pipeline and auth modules; lint, Prettier and
+  `tsc --noEmit` kept clean on every commit.
+- **Documented lessons.** [`GOTCHA.md`](GOTCHA.md) logs real surprises hit
+  along the way — e.g. a rate-limit dashboard that didn't match what the API
+  actually enforced.
+
+## Tech stack
+
+| Layer      | Choice                                                       |
+| ---------- | ------------------------------------------------------------ |
+| Backend    | NestJS (TypeScript)                                          |
+| Database   | Postgres + pgvector on Supabase                              |
+| Embeddings | OpenAI `text-embedding-3-small` (1536-d)                     |
+| LLM        | Claude Haiku 4.5 (Anthropic API)                             |
+| Frontend   | React + Vite + TypeScript, Supabase Auth                     |
+| Hosting    | Render (Docker web service + static site), via `render.yaml` |
+
+## Project structure
+
+```
+src/
+  ingestion/    epub → chapter chunks
+  embeddings/   batched, rate-limited embedding generation
+  retrieval/    question → top-k similar chunks (pgvector)
+  generation/   chunks + question → grounded, cited answer (Claude)
+  eval/         fixed Q&A test set + grading script
+  auth/         Supabase JWT verification (global guard)
+frontend/       React SPA: sign-in + Q&A view
 ```
 
-## Run tests
+## Running locally
+
+Requires Node 22+, a Supabase project with pgvector enabled, and OpenAI +
+Anthropic API keys.
 
 ```bash
-# unit tests
-$ npm run test
+cp .env.example .env                  # fill in DB URL, API keys, Supabase URL
+npm install
+npm run start:dev                     # backend on :3000
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cd frontend
+cp .env.example .env                  # Supabase URL + anon key, API base URL
+npm install
+npm run dev                           # frontend on :5173
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Other commands: `npm run test` (unit tests), `npm run eval` (live eval set).
+Deploying and pausing the hosted version is covered in
+[`PLAYBOOK.md`](PLAYBOOK.md).
